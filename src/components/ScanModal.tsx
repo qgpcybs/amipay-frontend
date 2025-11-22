@@ -61,13 +61,13 @@ export function ScanModal({ open, onClose, onResult }: ScanModalProps) {
             onScan={(detectedCodes) => {
               if (!detectedCodes || detectedCodes.length === 0) return;
               const first = detectedCodes[0];
-              console.log(first)
+              console.log(first);
               const value = first.rawValue;
-              console.log(value)
+              console.log(value);
               onResult(value);
               onClose();
             }}
-            onError={(e) => setError(e?.message ?? "Unknown error")}
+            onError={(e: any) => setError(e?.message ?? "Unknown error")}
           />
         </div>
 

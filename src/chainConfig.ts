@@ -1,7 +1,7 @@
 import type { Abi } from "viem";
 
-export const USDC_ADDRESS = "0xF6dEa88014c66558c2cE486390DB3C2892472054";
-export const AMIPAY_ADDRESS = "0x07a338D211D559c35B51d13fabF4CC83880e998C";
+export const USDC_ADDRESS = "0xCad6980d7c09EEcd20D4c12110C8b89755D9A227";
+export const AMIPAY_ADDRESS = "0x7b07761ae6D912B33Af13dFc962162ff8F611EaC";
 
 // mock USDC ABI
 export const erc20Abi = [
@@ -32,6 +32,16 @@ export const erc20Abi = [
     name: "approve",
     inputs: [
       { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    stateMutability: "nonpayable",
+    name: "transfer",
+    inputs: [
+      { name: "to", type: "address" },
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ type: "bool" }],

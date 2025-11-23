@@ -52,7 +52,7 @@ export function PaymentPrioritySheet({
   const { address } = useAccount();
   const publicClient = usePublicClient();
 
-  const [sponsors, setSponsors] = useState<`0x${string}`[]>([]);
+  const [_sponsors, setSponsors] = useState<`0x${string}`[]>([]);
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
 

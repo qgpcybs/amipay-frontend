@@ -77,10 +77,6 @@ function App() {
         ).toFixed(2)
       : "0.00";
 
-  const connectedDisplay = isConnected
-    ? formatAddress(address)
-    : "Not connected";
-
   // ---- Sponsor：Give a hand ----
   const [beneficiaryInput, setBeneficiaryInput] = useState("");
   const [depositAmountInput, setDepositAmountInput] = useState("");

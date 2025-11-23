@@ -19,6 +19,8 @@ import { waitForTransactionReceipt } from "wagmi/actions";
 import { wagmiConfig } from "./wagmiConfig";
 import { PaymentPrioritySheet } from "./components/PaymentPrioritySheet";
 import { parseAmiPayQr } from "./utils/amipayQr";
+import { formatAddress } from "./addressBook";
+import qrIcon from "./assets/ethglobal_qr.png";
 
 type AmiPayQrPayload = NonNullable<ReturnType<typeof parseAmiPayQr>>;
 
@@ -45,6 +47,7 @@ function App() {
   const [scanOpen, setScanOpen] = useState(false);
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const [priorityOpen, setPriorityOpen] = useState(false);
+  const [amipayOpen, setAmipayOpen] = useState(false);
 
   // ---- USDC balance ----
   const { data: usdcDecimals } = useReadContract({
@@ -74,8 +77,8 @@ function App() {
         ).toFixed(2)
       : "0.00";
 
-  const shortAddress = address
-    ? `${address.slice(0, 6)}...${address.slice(-4)}`
+  const connectedDisplay = isConnected
+    ? formatAddress(address)
     : "Not connected";
 
   // ---- Sponsor：Give a hand ----
@@ -246,17 +249,69 @@ function App() {
           maxWidth: 480,
           padding: "16px 20px 8px",
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-start",
           alignItems: "center",
         }}>
-        <ConnectButton showBalance={false} />
+        <ConnectButton.Custom>
+          {({
+            account,
+            chain,
+            mounted,
+            openAccountModal,
+            openConnectModal,
+          }) => {
+            const ready = mounted;
+            const connected = ready && account && chain;
+            if (!connected) {
+              return (
+                <button
+                  onClick={openConnectModal}
+                  style={{
+                    borderRadius: 999,
+                    border: "none",
+                    padding: "8px 14px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    background: "#fff",
+                    color: "#111",
+                    boxShadow: " 4px 3px 2px #111",
+                  }}>
+                  Connect wallet
+                </button>
+              );
+            }
+
+            const addr = account?.address as string;
+            const label = formatAddress(addr);
+
+            return (
+              <button
+                onClick={openAccountModal}
+                style={{
+                  borderRadius: 999,
+                  border: "none",
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: "#fff",
+                  color: "#111",
+                  boxShadow: " 4px 3px 2px #111",
+                }}>
+                {label}
+              </button>
+            );
+          }}
+        </ConnectButton.Custom>
       </header>
+
       <main
         style={{
           width: "100%",
           maxWidth: 480,
           flex: 1,
-          padding: "0 16px 80px",
+          padding: "0 0 80px",
           boxSizing: "border-box",
         }}>
         <div
@@ -264,36 +319,29 @@ function App() {
             background: "#f9f1f7",
             color: "#111",
             borderRadius: 24,
-            padding: 16,
+            paddingTop: 16,
             marginTop: 8,
           }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 8,
-            }}>
-            <span style={{ fontSize: 13, color: "#666" }}>
-              {isConnected ? shortAddress : "Not connected"}
-            </span>
-          </div>
           {/* Add & Withdraw Button */}
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <button style={pillButtonStyle} onClick={() => alert("Just mock")}>
+            <button
+              style={{ ...pillButtonStyle, flex: 1 }}
+              onClick={() => alert("Just mock")}>
               ↓ Add
             </button>
-            <button style={pillButtonStyle} onClick={() => alert("Just mock")}>
+            <button
+              style={{ ...pillButtonStyle, flex: 1 }}
+              onClick={() => alert("Just mock")}>
               ↑ Withdraw
             </button>
             <button
-              style={pillButtonStyle}
+              style={{ ...pillButtonStyle, flex: 1 }}
               onClick={() => setPriorityOpen(true)}>
-              Setting
+              + Setting
             </button>
           </div>
           {/* Balance */}
-          <div style={{ fontSize: 36, fontWeight: 700, margin: "8px 0" }}>
+          <div style={{ fontSize: 36, fontWeight: 700, margin: "18px 0" }}>
             {isFetchingBalance ? (
               <span style={{ fontSize: 18, color: "#aaa" }}>Updating…</span>
             ) : (
@@ -303,144 +351,22 @@ function App() {
           {/* Send & Request Button */}
           <div style={{ display: "flex", gap: 8 }}>
             <button
-              style={{ ...pillButtonStyle, flex: 1, background: "#ff70c8" }}
+              style={{ ...pillButtonStyle, flex: 1, background: "#ff8fe7" }}
               onClick={() => alert("Just mock")}>
               ↗ Send
             </button>
             <button
-              style={{ ...pillButtonStyle, flex: 1, background: "#ffd3f1" }}
+              style={{ ...pillButtonStyle, flex: 1, background: "#ff8fe7" }}
               onClick={() => alert("Just mock")}>
               ↙ Request
             </button>
+            <button
+              style={{ ...pillButtonStyle, flex: 1, background: "#ff8fe7" }}
+              onClick={() => setAmipayOpen(true)}>
+              ❤ Amipay
+            </button>
           </div>
         </div>
-        {/* Sponsor friends */}
-        <section style={{ marginTop: 20 }}>
-          <h2 style={{ fontSize: 16, marginBottom: 8 }}>Sponsor friends</h2>
-          <div
-            style={{
-              background: "#181818",
-              borderRadius: 16,
-              padding: 12,
-              fontSize: 13,
-              display: "grid",
-              gap: 8,
-            }}>
-            <label style={{ display: "grid", gap: 4 }}>
-              <span>Friend address</span>
-              <input
-                style={inputStyle}
-                placeholder="0x..."
-                value={beneficiaryInput}
-                onChange={(e) => setBeneficiaryInput(e.target.value)}
-              />
-            </label>
-
-            <label style={{ display: "grid", gap: 4 }}>
-              <span>Amount (USDC)</span>
-              <input
-                style={inputStyle}
-                placeholder="0.00"
-                value={depositAmountInput}
-                onChange={(e) => setDepositAmountInput(e.target.value)}
-              />
-            </label>
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                marginTop: 4,
-              }}>
-              <button
-                style={{
-                  ...pillButtonStyle,
-                  marginTop: 4,
-                  background: "#ff70c8",
-                }}
-                disabled={
-                  !isConnected ||
-                  !beneficiaryInput ||
-                  !depositAmountInput ||
-                  !usdcDecimals ||
-                  funding ||
-                  waitingDepositConfirm
-                }
-                // Give a hand
-                onClick={async () => {
-                  if (!address || !usdcDecimals) return;
-                  try {
-                    setFunding(true);
-                    setFundError(null);
-                    const amount = parseUnits(
-                      depositAmountInput || "0",
-                      Number(usdcDecimals)
-                    );
-                    const approveHash = await writeContractAsync({
-                      address: USDC_ADDRESS as `0x${string}`,
-                      abi: erc20Abi,
-                      functionName: "approve",
-                      args: [AMIPAY_ADDRESS as `0x${string}`, amount],
-                    });
-
-                    await waitForTransactionReceipt(wagmiConfig, {
-                      hash: approveHash as `0x${string}`,
-                      confirmations: 1,
-                    });
-
-                    const depositHash = await writeContractAsync({
-                      address: AMIPAY_ADDRESS as `0x${string}`,
-                      abi: amiPayAbi,
-                      functionName: "depositAllowance",
-                      args: [beneficiaryInput as `0x${string}`, amount],
-                    });
-
-                    setDepositAmountInput("");
-                    setLastDepositHash(depositHash as `0x${string}`);
-                  } catch (e: any) {
-                    const msg = e?.shortMessage || e?.message || "";
-                    if (
-                      msg.includes("RPC endpoint not found") ||
-                      msg.includes("Failed to fetch") ||
-                      msg.includes("Network error") ||
-                      msg.includes("timeout")
-                    ) {
-                      setFundError(
-                        "The RPC node may be unstable. Please try again."
-                      );
-                    } else {
-                      setFundError(
-                        "Transaction failed. Please check the details and try again."
-                      );
-                    }
-                  } finally {
-                    setFunding(false);
-                  }
-                }}>
-                {funding
-                  ? "Giving… (check wallet)"
-                  : waitingDepositConfirm
-                  ? "Sending on-chain…"
-                  : "Give a hand"}
-              </button>
-            </div>
-            {(fundError || waitingDepositConfirm) && (
-              <div
-                style={{
-                  marginTop: 8,
-                  fontSize: 12,
-                }}>
-                {waitingDepositConfirm && !fundError && (
-                  <span style={{ color: "#e5e5e5" }}>
-                    Awaiting block confirmation...
-                  </span>
-                )}
-                {fundError && (
-                  <span style={{ color: "#f97373" }}>{fundError}</span>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
 
         {/* block from QR */}
         {pendingPayment && (
@@ -538,8 +464,10 @@ function App() {
         )}
 
         {/* Activity */}
-        <section style={{ marginTop: 20 }}>
-          <h2 style={{ fontSize: 16, marginBottom: 8 }}>Activity</h2>
+        <section style={{ marginTop: 32 }}>
+          <h2 style={{ fontSize: 24, marginBottom: 16, color: "#111" }}>
+            Activity
+          </h2>
           <div
             style={{
               background: "#181818",
@@ -563,6 +491,171 @@ function App() {
             )}
           </div>
         </section>
+
+        {/* Amipay sponsor sheet */}
+        {amipayOpen && (
+          <div style={sheetOverlayStyle} onClick={() => setAmipayOpen(false)}>
+            <div style={sheetBodyStyle} onClick={(e) => e.stopPropagation()}>
+              <div
+                style={{
+                  width: 40,
+                  height: 4,
+                  borderRadius: 999,
+                  background: "#333",
+                  margin: "0 auto 12px",
+                }}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}>
+                <h2 style={{ fontSize: 16, margin: 0 }}>Sponsor friends</h2>
+                <button
+                  onClick={() => setAmipayOpen(false)}
+                  style={{
+                    border: "none",
+                    borderRadius: 999,
+                    padding: "4px 10px",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    background: "#222",
+                    color: "#eee",
+                  }}>
+                  Done
+                </button>
+              </div>
+              {/* Sponsor friends */}
+              <section style={{ marginTop: 20 }}>
+                <div
+                  style={{
+                    background: "#181818",
+                    borderRadius: 16,
+                    padding: 12,
+                    fontSize: 13,
+                    display: "grid",
+                    gap: 8,
+                  }}>
+                  <label style={{ display: "grid", gap: 4 }}>
+                    <span>Friend address</span>
+                    <input
+                      style={inputStyle}
+                      placeholder="0x..."
+                      value={beneficiaryInput}
+                      onChange={(e) => setBeneficiaryInput(e.target.value)}
+                    />
+                  </label>
+
+                  <label style={{ display: "grid", gap: 4 }}>
+                    <span>Amount (USDC)</span>
+                    <input
+                      style={inputStyle}
+                      placeholder="0.00"
+                      value={depositAmountInput}
+                      onChange={(e) => setDepositAmountInput(e.target.value)}
+                    />
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      marginTop: 4,
+                    }}>
+                    <button
+                      style={{
+                        ...pillButtonStyle,
+                        marginTop: 4,
+                        background: "#ff70c8",
+                      }}
+                      disabled={
+                        !isConnected ||
+                        !beneficiaryInput ||
+                        !depositAmountInput ||
+                        !usdcDecimals ||
+                        funding ||
+                        waitingDepositConfirm
+                      }
+                      // Give a hand
+                      onClick={async () => {
+                        if (!address || !usdcDecimals) return;
+                        try {
+                          setFunding(true);
+                          setFundError(null);
+                          const amount = parseUnits(
+                            depositAmountInput || "0",
+                            Number(usdcDecimals)
+                          );
+                          const approveHash = await writeContractAsync({
+                            address: USDC_ADDRESS as `0x${string}`,
+                            abi: erc20Abi,
+                            functionName: "approve",
+                            args: [AMIPAY_ADDRESS as `0x${string}`, amount],
+                          });
+
+                          await waitForTransactionReceipt(wagmiConfig, {
+                            hash: approveHash as `0x${string}`,
+                            confirmations: 1,
+                          });
+
+                          const depositHash = await writeContractAsync({
+                            address: AMIPAY_ADDRESS as `0x${string}`,
+                            abi: amiPayAbi,
+                            functionName: "depositAllowance",
+                            args: [beneficiaryInput as `0x${string}`, amount],
+                          });
+
+                          setDepositAmountInput("");
+                          setLastDepositHash(depositHash as `0x${string}`);
+                        } catch (e: any) {
+                          const msg = e?.shortMessage || e?.message || "";
+                          if (
+                            msg.includes("RPC endpoint not found") ||
+                            msg.includes("Failed to fetch") ||
+                            msg.includes("Network error") ||
+                            msg.includes("timeout")
+                          ) {
+                            setFundError(
+                              "The RPC node may be unstable. Please try again."
+                            );
+                          } else {
+                            setFundError(
+                              "Transaction failed. Please check the details and try again."
+                            );
+                          }
+                        } finally {
+                          setFunding(false);
+                        }
+                      }}>
+                      {funding
+                        ? "Giving… (check wallet)"
+                        : waitingDepositConfirm
+                        ? "Sending on-chain…"
+                        : "Give a hand"}
+                    </button>
+                  </div>
+                  {(fundError || waitingDepositConfirm) && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontSize: 12,
+                      }}>
+                      {waitingDepositConfirm && !fundError && (
+                        <span style={{ color: "#e5e5e5" }}>
+                          Awaiting block confirmation...
+                        </span>
+                      )}
+                      {fundError && (
+                        <span style={{ color: "#f97373" }}>{fundError}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            </div>
+          </div>
+        )}
       </main>
       <footer
         style={{
@@ -594,8 +687,18 @@ function App() {
             marginTop: -32,
             boxShadow: "0 6px 16px rgba(0,0,0,0.5)",
             cursor: "pointer",
+            overflow: "hidden",
           }}>
-          📷
+          <img
+            src={qrIcon}
+            alt="Scan QR"
+            style={{
+              width: "70%",
+              height: "70%",
+              objectFit: "contain",
+              pointerEvents: "none",
+            }}
+          />
         </button>
         <button style={navButtonStyle}>💬 Support</button>
       </footer>
@@ -624,14 +727,16 @@ function App() {
 }
 
 const pillButtonStyle: React.CSSProperties = {
-  flex: 1,
+  // flex: 0.5,
   borderRadius: 999,
   border: "none",
-  padding: "8px 12px",
+  padding: "12px 32px",
   fontSize: 14,
   fontWeight: 600,
   cursor: "pointer",
-  background: "#fdf0ff",
+  background: "#fff",
+  color: "#111",
+  boxShadow: " 4px 3px 2px #111",
 };
 
 const navButtonStyle: React.CSSProperties = {
@@ -653,6 +758,29 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
   background: "#111",
   color: "#f5f5f5",
+};
+
+const sheetOverlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 60,
+  background: "rgba(0,0,0,0.4)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "flex-end",
+};
+
+const sheetBodyStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: 480,
+  background: "#111",
+  color: "#f5f5f5",
+  borderTopLeftRadius: 24,
+  borderTopRightRadius: 24,
+  padding: 16,
+  paddingBottom: 24,
+  boxShadow: "0 -10px 30px rgba(0,0,0,0.6)",
+  marginBottom: 72,
 };
 
 export default App;
